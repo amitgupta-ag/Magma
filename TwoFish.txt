@@ -1,0 +1,794 @@
+//Author: Amit Gupta
+//01-Jan-2015
+
+
+//this function converts from decimal to Hexadecimal
+//the output is a string because it helps full encryption routine
+function DecToHexString(n)
+	hexNumber := Intseq(n, 16);
+	value := "";
+	s := "";
+	for i in [1..#hexNumber] do
+		if hexNumber[i] le 9 then
+			value := IntegerToString(hexNumber[i]);
+		else
+			case hexNumber[i]:
+				//case A
+				when 10:
+					value := "A";
+				//case B
+				when 11:
+					value := "B";
+				//case C
+				when 12:
+					value := "C";
+				//case D
+				when 13:
+					value := "D";
+				//case E
+				when 14:
+					value := "E";
+				// case F
+				when 15:
+					value := "F";
+			end case;
+		end if;
+		s := value cat s;
+	end for;
+	n := #s;
+	if n le 32 then
+		n := 32;
+	elif n le 48  and n ge 33 then
+		n := 48;
+	elif n le 64 and n ge 49 then
+		n := 64;
+	end if;
+	r := n - #s;
+	if r ne 0 then
+		s := "0"^r cat s;
+	end if;
+	return s;
+end function;
+
+//this function takes an integer as input and returns a sequence of 0 and 1
+
+function AsciiHex(x)
+
+	// INPUT: hexadecimal value (4 bits)
+	// OUTPUT: corrisponding sequence
+
+	if x eq 0 then
+		return [0,0,0,0];
+	else
+		return Reverse(ElementToSequence(GF(2^4)!Intseq(x,2)));
+	end if;
+
+end function;
+
+
+function AsciiToValue(x)
+
+	// INPUT: ascii sequence (4 bits)
+	// OUTPUT: corresponding value (numeric)
+
+	value :=0;
+	for i in [1..#x] do
+		value := value + (Integers()!x[i])*2^(4-i);
+	end for;
+
+	return value;
+end function;
+
+function XOR(x1,x2)
+
+	// INPUT: x1 byte and x2 byte, numeric value
+	// OUTPUT: XOR between x1 and x2, numeric value
+
+	if x1 eq 0 then
+		x1:=[0,0,0,0,0,0,0,0];
+	else
+		a1 := x1 div 16; b1 := x1 mod 16;
+		x1 := AsciiHex(a1) cat AsciiHex(b1);
+	end if;
+
+	if x2 eq 0 then
+		x2:=[0,0,0,0,0,0,0,0];
+	else
+		a2 := x2 div 16; b2 := x2 mod 16;
+		x2 := AsciiHex(a2) cat AsciiHex(b2);
+	end if;
+
+	V8 := VectorSpace(GF(2),8);
+	y := V8!x1 + V8!x2;
+	y := ElementToSequence(y);
+
+	return AsciiToValue(y[1..4])*16 + AsciiToValue(y[5..8]);
+end function;
+
+
+function XOR32(x1,x2)
+
+	// INPUT: x1 32 bit word, x2 32 bit word
+	// OUTPUT: XOR di x1 e x2
+
+	if x1 eq 0 then
+		O:=[0,0,0,0,0,0,0,0];
+		x1 := O cat O cat O cat O;
+	else
+		a7 := x1 mod 2^4;
+		a6 := x1 div 2^4 mod 2^4;
+		a5 := x1 div 2^8 mod 2^4;
+		a4 := x1 div 2^12 mod 2^4;
+		a3 := x1 div 2^16 mod 2^4;
+		a2 := x1 div 2^20 mod 2^4;
+		a1 := x1 div 2^24 mod 2^4;
+		a0 := x1 div 2^28 mod 2^4;
+		x1 := AsciiHex(a0) cat AsciiHex(a1) cat AsciiHex(a2) cat AsciiHex(a3) cat AsciiHex(a4) cat AsciiHex(a5) cat AsciiHex(a6) cat AsciiHex(a7);
+	end if;
+
+	if x2 eq 0 then
+		O:=[0,0,0,0,0,0,0,0];
+		x2 := O cat O cat O cat O;
+	else
+		b7 := x2 mod 2^4;
+		b6 := x2 div 2^4 mod 2^4;
+		b5 := x2 div 2^8 mod 2^4;
+		b4 := x2 div 2^12 mod 2^4;
+		b3 := x2 div 2^16 mod 2^4;
+		b2 := x2 div 2^20 mod 2^4;
+		b1 := x2 div 2^24 mod 2^4;
+		b0 := x2 div 2^28 mod 2^4;
+		x2 := AsciiHex(b0) cat AsciiHex(b1) cat AsciiHex(b2) cat AsciiHex(b3) cat AsciiHex(b4) cat AsciiHex(b5) cat AsciiHex(b6) cat AsciiHex(b7);
+	end if;
+
+	V32 := VectorSpace(GF(2),32);
+	y := V32!x1 + V32!x2;
+	y := ElementToSequence(y);
+
+	return AsciiToValue(y[1..4])*2^28 + AsciiToValue(y[5..8])*2^24 + AsciiToValue(y[9..12])*2^20 + AsciiToValue(y[13..16])*2^16 + AsciiToValue(y[17..20])*2^12 + AsciiToValue(y[21..24])*2^8 + AsciiToValue(y[25..28])*2^4 + AsciiToValue(y[29..32]);
+end function;
+
+function MagmaToValue(x)
+
+	// INPUT: x magma sequence
+	// OUTPUT: corresponding numeric value
+
+
+	value := 0;
+	for i in [1..#x] do
+		value := value + (Integers()!x[i])*2^(i-1);
+	end for;
+
+	return value;
+end function;
+
+//x is the value, the table can be 0 or 1, it depends on the function
+//0 -> q0
+//1 -> q1
+function q(x, table)
+
+	//Input: x numeric 8 bit value
+	//Output: y numeric 8 bit value
+	t0 := [];
+	t1 := [];
+	t2 := [];
+	t3 := [];
+
+	//selection of table value
+	if table eq 0 then 
+		t0:=[0x8,0x1,0x7,0xD,0x6,0xF,0x3,0x2,0x0,0xB,0x5,0x9,0xE,0xC,0xA,0x4];
+		t1:=[0xE,0xC,0xB,0x8,0x1,0x2,0x3,0x5,0xF,0x4,0xA,0x6,0x7,0x0,0x9,0xD];
+		t2:=[0xB,0xA,0x5,0xE,0x6,0xD,0x9,0x0,0xC,0x8,0xF,0x3,0x2,0x4,0x7,0x1];
+		t3:=[0xD,0x7,0xF,0x4,0x1,0x2,0x6,0xE,0x9,0xB,0x3,0x0,0x8,0x5,0xC,0xA];
+	else
+		t0:=[0x2,0x8,0xB,0xD,0xF,0x7,0x6,0xE,0x3,0x1,0x9,0x4,0x0,0xA,0xC,0x5];
+		t1:=[0x1,0xE,0x2,0xB,0x4,0xC,0x3,0x7,0x6,0xD,0xA,0x5,0xF,0x9,0x0,0x8];
+		t2:=[0x4,0xC,0x7,0x5,0x1,0x6,0x9,0xA,0x0,0xE,0xD,0x8,0x2,0xB,0x3,0xF];
+		t3:=[0xB,0x9,0x5,0x1,0xC,0x3,0xD,0xE,0x6,0x4,0x7,0xF,0x2,0x0,0x8,0xA]; 
+	end if;
+	
+
+	b0 := x mod 16;		// b0 numeric nubble
+	a0 := x div 16;		// a0 numeric nibble
+
+	V4 := VectorSpace(GF(2),4);
+
+	a1 := V4!AsciiHex(a0) + V4!AsciiHex(b0);
+	if IsEven(a0) eq true then 
+		b1 := V4!AsciiHex(a0) + V4!Rotate(AsciiHex(b0),1);
+	else
+		b1 := V4!AsciiHex(a0) + V4!Rotate(AsciiHex(b0),1) + V4![1,0,0,0];
+	end if;
+
+	//a1,b1 are in V4
+
+	a1 := AsciiToValue(ElementToSequence(a1));
+	b1 := AsciiToValue(ElementToSequence(b1));
+
+	a2 := t0[a1+1]; 
+	b2 := t1[b1+1];
+
+	a3 := V4!AsciiHex(a2) + V4!AsciiHex(b2);
+	if IsEven(a2) eq true then 
+		b3 := V4!AsciiHex(a2) + V4!Rotate(AsciiHex(b2),1);
+	else
+		b3 := V4!AsciiHex(a2) + V4!Rotate(AsciiHex(b2),1) + V4![1,0,0,0];
+	end if;
+
+	//a3,b3 is in finite field
+
+	a3 := AsciiToValue(ElementToSequence(a3));
+	b3 := AsciiToValue(ElementToSequence(b3));
+
+	a4 := t2[a3+1]; 
+	b4 := t3[b3+1];
+	y := 16*b4+a4;
+
+	return y;
+end function;
+
+//the function h
+function h(X,L)
+
+	// INPUT	X 32 bit word and L sequence of 32 bit word, the length is k
+	// OUTPUT	Z 32 bit word
+
+	divisor := 2^8;
+
+	//we must break X, the numeric value is of 4 Bytess
+
+	x0 := X mod divisor;
+	x1 := X div 2^8 mod divisor;
+	x2 := X div 2^16 mod divisor;
+	x3 := X div 2^24 mod divisor;
+
+	//devo spezzare L... (sequenza di k valori numerici) in 4 byte e calcolare y0,y1,y2,y3
+
+	//k is the number of sublist of 32 bits in L
+	//k : 2 -> 32 characters (128 bits)
+	//k : 3 -> 48 characters (192 bits)
+	//k : 4 -> 64 characters (256 bits)
+	k := #L;
+	power := 0;
+
+	if k eq 4 then
+		x0 := XOR(q(x0, 1), L[4] mod divisor);
+		x1 := XOR(q(x1, 0), L[4] div 2^8 mod divisor);
+		x2 := XOR(q(x2, 0), L[4] div 2^16 mod divisor);
+		x3 := XOR(q(x3, 1), L[4] div 2^24 mod divisor);
+
+		k -:= 1;
+
+	end if;
+	if k eq 3 then
+
+		x0 := XOR(q(x0, 1), L[3] mod divisor);
+		x1 := XOR(q(x1, 1), L[3] div 2^8 mod divisor);
+		x2 := XOR(q(x2, 0), L[3] div 2^16 mod divisor);
+		x3 := XOR(q(x3, 0), L[3] div 2^24 mod divisor);
+
+		k -:=1;
+
+	end if;
+
+	if k eq 2 then
+
+		y0 := q(XOR(q(XOR(q(x0, 0), L[2] mod divisor), 0), L[1] mod divisor), 1);
+		y1 := q(XOR(q(XOR(q(x1, 1), L[2] div 2^8 mod divisor), 0), L[1] div 2^8 mod divisor), 0);
+		y2 := q(XOR(q(XOR(q(x2, 0), L[2] div 2^16 mod divisor), 1), L[1] div 2^16 mod divisor), 1);
+		y3 := q(XOR(q(XOR(q(x3, 1), L[2] div 2^24 mod divisor), 1), L[1] div 2^24 mod divisor), 0);
+		
+	end if;
+
+
+	// MDS multiplication
+
+	M:=[0x01,0xEF,0x5B,0x5B,0x5B,0xEF,0xEF,0x01,0xEF,0x5B,0x01,0xEF,0xEF,0x01,0xEF,0x5B];
+
+	F2<x> := PolynomialRing(GF(2));
+	p := x^8+x^6+x^5+x^3+1;
+	GF_28mds:=ext<GF(2)|p>;
+
+	MM:=[];
+	for i in [1..#M] do
+		MM[i] := (GF_28mds)!Intseq(M[i],2);
+	end for;
+
+	if y0 eq 0 then 
+		y0 := GF_28mds!0;
+	else
+		y0 := GF_28mds!Intseq(y0,2);
+	end if;
+
+	if y1 eq 0 then 
+		y1 := GF_28mds!0;
+	else
+		y1 := GF_28mds!Intseq(y1,2);
+	end if;
+
+	if y2 eq 0 then 
+		y2 := GF_28mds!0;
+	else
+		y2 := GF_28mds!Intseq(y2,2);
+	end if;
+
+	if y3 eq 0 then 
+		y3 := GF_28mds!0;
+	else
+		y3 := GF_28mds!Intseq(y3,2);
+	end if;
+
+
+	z0 := MM[1]*y0+MM[2]*y1 + MM[3]*y2 +MM[4]*y3;
+	z1 := MM[5]*y0+MM[6]*y1 + MM[7]*y2 +MM[8]*y3;
+	z2 := MM[9]*y0+MM[10]*y1 + MM[11]*y2 +MM[12]*y3;
+	z3 := MM[13]*y0+MM[14]*y1 + MM[15]*y2 +MM[16]*y3;
+
+
+	z0 := ElementToSequence(z0);
+	z1 := ElementToSequence(z1);
+	z2 := ElementToSequence(z2);
+	z3 := ElementToSequence(z3);
+
+	Z := MagmaToValue(z0) + MagmaToValue(z1)*2^8 + MagmaToValue(z2)*2^16 + MagmaToValue(z3)*2^24;
+
+	return Z;
+
+end function;
+
+//key genearation
+function makekeyMeMoSkey(K)
+
+	// INPUT : key K (string)
+	// OUTPUT: subkeys (64 bit Me,Mo e S length)
+
+	// conversion of k in number.
+
+	N := #K;
+	if N mod 8 eq 0 then
+		K := StringToInteger(K,16);			
+	else N := #K-2;
+		K := Substring(K,3,N);
+		K := StringToInteger(K,16);		
+	end if;
+
+	if N eq 32 then
+		K := Intseq(K,16);
+		while #K ne 32 do	
+			K := Append(K,0x0);
+		end while;	
+	end if;
+
+	if N eq 48 then
+		K := Intseq(K,16);
+		while #K ne 48 do	
+			K := Append(K,0x0);
+		end while;	
+	end if;
+
+	if N eq 64 then
+		K := Intseq(K,16);
+		while #K ne 64 do	
+			K := Append(K,0x0);
+		end while;	
+	end if;
+
+	k := Floor(N/16);
+
+	// conversion of k in sequence, lenght 8*k, byte in GF(2^8)
+
+	L:=[]; t:=0; M:=[];
+	for i in [1..#K] do
+		L := Append(L,K[i]);
+		if i mod 2 eq 0 then
+			M := Insert(M,1,L);
+			L := [];
+			t := t+1;
+		end if;
+	end for;
+
+	L :=[];
+	for i in [1..#M] do
+		L[i] := (M[i][2]*16+M[i][1]); 
+	end for;
+	Bytes := L;
+
+	// Construction of Me,Mo keys
+
+	L:=[]; t :=0; MM:=[];
+	for i in [1..#Bytes] do
+		L := Append(L,Bytes[i]);
+		if i mod 4 eq 0 then
+			MM := Append(MM,L);
+			L := [];
+		end if;
+	end for;
+
+	L:=[];
+	for i in [1..#MM] do
+			L[i] := MM[i][1] + MM[i][2]*2^8 + MM[i][3]*2^16 + MM[i][4]*2^24;
+	end for;
+
+
+	if k eq 2 then
+		Mekey := [L[1],L[3]];
+		Mokey := [L[2],L[4]];
+	end if;
+
+	if k eq 3 then
+		Mekey := [L[1],L[3], L[5]];
+		Mokey := [L[2],L[4], L[6]];
+	end if;
+
+	if k eq 4 then
+		Mekey := [L[1],L[3], L[5], L[7]];
+		Mokey := [L[2],L[4], L[6], L[8]];
+	end if;
+
+
+	// Calculation of S
+
+	RS := [0x01,0xA4,0x55,0x87,0x5A,0x58,0xDB,0x9E,0xA4,0x56,0x82,0xF3,0x1E,0xC6,0x68,0xE5,0x02,0xA1,0xFC,0xC1,0x47,0xAE,0x3D,0x19,0xA4,0x55,0x87,0x5A,0x58,0xDB,0x9E,0x03];
+
+	F2<x> := PolynomialRing(GF(2));
+	p := x^8+x^6+x^3+x^2+1;
+	GF_28:=ext<GF(2)|p>;
+
+	RSS:=[];
+	for i in [1..#RS] do
+		RSS[i] := (GF_28)!Intseq(RS[i],2);
+	end for;
+
+	m := []; t:=1;
+	for i in [1..2*k] do
+		for j in [1..4] do
+			if MM[i][j] eq 0 then
+				m[t] := GF_28!0;
+			else
+				m[t] := GF_28!Intseq(MM[i][j],2);
+			end if;
+			t := t+1;
+		end for;
+	end for;
+
+	Skey :=[];
+
+	L := [m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8]];
+	RS := Matrix(GF_28,4,8,RSS);
+	v := Matrix(GF_28,8,1, L);
+	S := RS*v;
+	S := ElementToSequence(S);
+	Skey[1] := ElementToSequence(S[1]) cat ElementToSequence(S[2]) cat ElementToSequence(S[3]) cat ElementToSequence(S[4]); 
+
+	L := [m[9],m[10],m[11],m[12],m[13],m[14],m[15],m[16]];
+	v := Matrix(GF_28,8,1, L);
+	S := RS*v;
+	S := ElementToSequence(S);
+	Skey[2] := ElementToSequence(S[1]) cat ElementToSequence(S[2]) cat ElementToSequence(S[3]) cat ElementToSequence(S[4]); 
+
+	if N ge 48 then 
+		L := [m[17],m[18],m[19],m[20],m[21],m[22],m[23],m[24]];
+		v := Matrix(GF_28,8,1, L);
+		S := RS*v;
+		S := ElementToSequence(S);
+		Skey[3] := ElementToSequence(S[1]) cat ElementToSequence(S[2]) cat ElementToSequence(S[3]) cat ElementToSequence(S[4]); 
+		
+		if N ge 64 then
+			L := [GF_28!m[25],GF_28!m[26],GF_28!m[27],GF_28!m[28],GF_28!m[29],GF_28!m[30],GF_28!m[31],GF_28!m[32]];
+			v := Matrix(GF_28,8,1, L);
+			S := RS*v;
+			S := ElementToSequence(S);
+			Skey[4] := ElementToSequence(S[1]) cat ElementToSequence(S[2]) cat ElementToSequence(S[3]) cat ElementToSequence(S[4]); 
+		end if;
+	end if;
+
+	S := [];		
+	for i in [1..k] do
+		a := ElementToSequence(Skey[i]);
+		y := [];
+		for i in [1..32] do
+			y[i] := Integers()!a[i];
+		end for;
+		S[i] := Seqint(y,2);
+	end for;
+
+	return Mokey,Mekey,Reverse(S);
+end function;
+
+function makeSubkeys(K)
+
+	// INPUT 	key K
+	// OUTPUT	sequence of subkeys
+
+	Me,Mo,S := makekeyMeMoSkey(K);
+	r := 2^24+2^16+2^8+1;
+
+	A:=[]; B:=[];
+	for i in [1..20] do
+		A[i] := h(2*(i-1)*r, Mo);
+		b := h((2*i-1)*r, Me);
+		b := Rotate(ElementToSequence(GF(2^32)!Intseq(b,2)),8);
+		B[i] := MagmaToValue(b);
+	end for;
+
+	Sk:=[]; j:=1;
+	for i in [1..20] do
+		Sk[j] := (A[i]+B[i]) mod 2^32;
+		a := (A[i]+2*B[i]) mod 2^32;
+		a := Rotate(ElementToSequence(GF(2^32)!Intseq(a,2)),9);
+		Sk[j+1] := MagmaToValue(a);
+		j:=j+2;
+	end for;
+
+	return Sk;
+end function;
+
+//by Alex
+//it accepts
+//key hexadecimal String, plaintext hexadecimal String
+//returns
+//ciphertext hexadecimal String
+function Twofish_Encryption(K,P)
+
+	// INPUT	K key (string), P plaintext (string)
+	// OUTPUT 	C ciphertext
+
+	Me,Mo,S := makekeyMeMoSkey(K);
+	Ks := makeSubkeys(K);
+
+	P := StringToInteger(P,16);		
+	P := Intseq(P,16);
+	while #P ne 32 do	
+		P := Append(P,0x0);
+	end while;	
+
+	L:=[]; t:=0; M:=[];
+	for i in [1..#P] do
+		L := Append(L,P[i]);
+		if i mod 2 eq 0 then
+			M := Insert(M,1,L);
+			L := [];
+			t := t+1;
+		end if;
+	end for;
+
+	L :=[];
+	for i in [1..#M] do
+		L[i] := (M[i][2]*16+M[i][1]); 
+	end for;
+	Bytes := L;
+
+	L:=[]; t :=0; MM:=[];
+	for i in [1..#Bytes] do
+		L := Append(L,Bytes[i]);
+		if i mod 4 eq 0 then
+			MM := Append(MM,L);
+			L := [];
+		end if;
+	end for;
+
+	L:=[];
+	for i in [1..#MM] do
+			L[i] := MM[i][1] + MM[i][2]*2^8 + MM[i][3]*2^16 + MM[i][4]*2^24;
+	end for;
+	P:=L;
+
+	//	ROUND 0: input whitening
+
+	R_00 := XOR32(P[1],Ks[1]);
+	R_01 := XOR32(P[2],Ks[2]);
+	R_02 := XOR32(P[3],Ks[3]);
+	R_03 := XOR32(P[4],Ks[4]);
+
+	for r in [0..15] do
+		T0 := h(R_00,S);
+		//shifting
+		shiftR1 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_01,2)),8);
+		shiftR1 := MagmaToValue(shiftR1);
+		
+		T1 := h(shiftR1,S);
+
+		//calling F function
+		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod 2^32;
+		F1 := (T0 + 2*T1 + Ks[(2*r+9)+1]) mod 2^32;
+
+		//round operation
+
+		R_10 := XOR32(R_02,F0);
+		R_10 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_10,2)),-1);
+		R_10 := MagmaToValue(R_10);
+
+		shiftR3 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_03,2)),+1);
+		shiftR3 := MagmaToValue(shiftR3);
+
+		R_11 := XOR32(shiftR3,F1);
+
+		//preparing the next round
+		R_02 := R_00;
+		R_03 := R_01;
+		R_00 := R_10;
+		R_01 := R_11;
+
+	end for;
+
+	// swap
+	R_170 := R_02;
+	R_171 := R_03;
+	R_172 := R_00;
+	R_173 := R_01;
+
+	// output whitening
+	C0 := XOR32(R_170,Ks[5]);
+	C1 := XOR32(R_171,Ks[6]);
+	C2 := XOR32(R_172,Ks[7]);
+	C3 := XOR32(R_173,Ks[8]);
+
+
+	c := [];
+	for i in [1..16] do
+		if i le 4 then
+			c[i] := Floor(C0/2^(8*(i-1))) mod 2^8;
+		elif i le 8 then
+			c[i] := Floor(C1/2^(8*(i-5))) mod 2^8;
+		elif i le 12 then
+			c[i] := Floor(C2/2^(8*(i-9))) mod 2^8;
+		else 
+			c[i] := Floor(C3/2^(8*(i-13))) mod 2^8;
+		end if;
+	end for;
+
+	Ciphertext := 0;
+	for i in [1..16] do
+		Ciphertext := Ciphertext + (c[i]*2^(8*(16-i)));
+	end for;
+
+	CypertextS := DecToHexString(Ciphertext);
+
+	return CypertextS;
+end function;
+
+//it accepts
+//key hexadecimal String, plaintext hexadecimal String, number of encryptions
+//returns
+//a list of ciphertext hexadecimal Strings, in order of generation
+function FullEncription(K, P, Iterations)
+	bit := #K;
+	CT := [];
+	CTtemp := "";
+	OldKey := "";
+	for z in [1..Iterations] do
+		CTtemp := Twofish_Encryption(K, P);
+		OldKey := K;
+		if #K eq 48 then
+			K := P cat OldKey[1..16];
+		elif #K eq 64 then
+			K := P cat OldKey[1..32];
+		else
+			K := P;
+		end if;
+		P := CTtemp;
+		Append(~CT, CTtemp);
+		CTtemp := "";
+	end for;
+	return CT;
+end function;
+
+
+//it accepts
+//key hexadecimal String, ciphertext hexadecimal String
+//returns
+//plaintext hexadecimal String
+function Twofish_Decryption(K,C)
+
+
+	Me,Mo,S := makekeyMeMoSkey(K);
+	Ks := makeSubkeys(K);
+
+	C := StringToInteger(C,16);		
+	C := Intseq(C,16);
+	while #C ne 32 do	
+		C := Append(C,0x0);
+	end while;	
+
+	L:=[]; t:=0; M:=[];
+	for i in [1..#C] do
+		L := Append(L,C[i]);
+		if i mod 2 eq 0 then
+			M := Insert(M,1,L);
+			L := [];
+			t := t+1;
+		end if;
+	end for;
+
+	L :=[];
+	for i in [1..#M] do
+		L[i] := (M[i][2]*16+M[i][1]); 
+	end for;
+	Bytes := L;
+
+	L:=[]; t :=0; MM:=[];
+	for i in [1..#Bytes] do
+		L := Append(L,Bytes[i]);
+		if i mod 4 eq 0 then
+			MM := Append(MM,L);
+			L := [];
+		end if;
+	end for;
+
+	L:=[];
+	for i in [1..#MM] do
+			L[i] := MM[i][1] + MM[i][2]*2^8 + MM[i][3]*2^16 + MM[i][4]*2^24;
+	end for;
+	C:=L;
+
+	//it is needed to doing all reverse, so..
+	//output whitening
+	R_00 := XOR32(C[1],Ks[5]);
+	R_01 := XOR32(C[2],Ks[6]);
+	R_02 := XOR32(C[3],Ks[7]);
+	R_03 := XOR32(C[4],Ks[8]);
+
+	r := 15;
+	//doing rounds
+	while r ge 0 do
+		//F function
+		T0 := h(R_00,S);
+		shiftR1 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_01,2)),8);
+		shiftR1 := MagmaToValue(shiftR1);
+		T1 := h(shiftR1,S); 
+
+		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod 2^32;
+		F1 := (T0 + 2*T1 + Ks[(2*r+9)+1]) mod 2^32;
+
+		// round operation
+
+		shiftR2 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_02,2)),1);
+		shiftR2 := MagmaToValue(shiftR2);
+		R_10 := XOR32(shiftR2,F0);
+
+		R_11 := XOR32(R_03,F1);
+		R_11 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_11,2)),-1);
+		R_11 := MagmaToValue(R_11);
+
+		R_02 := R_00;
+		R_03 := R_01;
+		R_00 := R_10;
+		R_01 := R_11;
+
+		r -:= 1;
+	end while;
+
+	// swap
+	R_170 := R_02;
+	R_171 := R_03;
+	R_172 := R_00;
+	R_173 := R_01;
+
+	//whitening
+	P0 := XOR32(R_170,Ks[1]);
+	P1 := XOR32(R_171,Ks[2]);
+	P2 := XOR32(R_172,Ks[3]);
+	P3 := XOR32(R_173,Ks[4]);
+
+	p := [];
+	for i in [1..16] do
+		if i le 4 then
+			p[i] := Floor(P0/2^(8*(i-1))) mod 2^8;
+		elif i le 8 then
+			p[i] := Floor(P1/2^(8*(i-5))) mod 2^8;
+		elif i le 12 then
+			p[i] := Floor(P2/2^(8*(i-9))) mod 2^8;
+		else 
+			p[i] := Floor(P3/2^(8*(i-13))) mod 2^8;
+		end if;
+	end for;
+
+	Plaintext := 0;
+	for i in [1..16] do
+		Plaintext := Plaintext + (p[i]*2^(8*(16-i)));
+	end for;
+
+	Plaintext := DecToHexString(Plaintext);
+
+	return Plaintext;
+end function;
