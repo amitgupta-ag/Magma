@@ -1,6 +1,7 @@
-//Author: Amit Gupta
-//01-Jan-2015
-
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::://
+//::::::::::::::::::Author: Amit Gupta:::::::::::::::::://
+//:::::::::::::::::::::01-Jan-2015:::::::::::::::::::::://
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 //this function converts from decimal to Hexadecimal
 //the output is a string because it helps full encryption routine
@@ -162,6 +163,10 @@ function MagmaToValue(x)
 	return value;
 end function;
 
+	///////////////////////////////////////////////////////////
+	/////////////////////// q function ////////////////////////
+	///////////////////////////////////////////////////////////
+
 //x is the value, the table can be 0 or 1, it depends on the function
 //0 -> q0
 //1 -> q1
@@ -226,6 +231,10 @@ function q(x, table)
 
 	return y;
 end function;
+
+	///////////////////////////////////////////////////////////
+	//////////////////////// g FUNCTION ///////////////////////
+	///////////////////////////////////////////////////////////
 
 //the function h
 function h(X,L)
@@ -336,6 +345,10 @@ function h(X,L)
 
 end function;
 
+	///////////////////////////////////////////////////////////
+	///////////////////// Key Schedular ///////////////////////
+	///////////////////////////////////////////////////////////
+
 //key genearation
 function makekeyMeMoSkey(K)
 
@@ -345,6 +358,7 @@ function makekeyMeMoSkey(K)
 	// conversion of k in number.
 
 	N := #K;
+	print "N is:: ",N;
 	if N mod 8 eq 0 then
 		K := StringToInteger(K,16);			
 	else N := #K-2;
@@ -376,15 +390,17 @@ function makekeyMeMoSkey(K)
 	k := Floor(N/16);
 
 	// conversion of k in sequence, lenght 8*k, byte in GF(2^8)
-
+print "K::",K;
 	L:=[]; t:=0; M:=[];
 	for i in [1..#K] do
 		L := Append(L,K[i]);
+//print "intermL:: ", L;
 		if i mod 2 eq 0 then
 			M := Insert(M,1,L);
 			L := [];
 			t := t+1;
 		end if;
+//print "M is::", M;
 	end for;
 
 	L :=[];
@@ -393,7 +409,9 @@ function makekeyMeMoSkey(K)
 	end for;
 	Bytes := L;
 
-	// Construction of Me,Mo keys
+	///////////////////////////////////////////////////////////
+	/////////////// Construction of Me,Mo keys ////////////////
+	///////////////////////////////////////////////////////////
 
 	L:=[]; t :=0; MM:=[];
 	for i in [1..#Bytes] do
@@ -523,7 +541,10 @@ function makeSubkeys(K)
 	return Sk;
 end function;
 
-//by Alex
+	///////////////////////////////////////////////////////////
+	////////////////// TWO FISH ENCRYPTION ////////////////////
+	///////////////////////////////////////////////////////////
+
 //it accepts
 //key hexadecimal String, plaintext hexadecimal String
 //returns
@@ -535,6 +556,8 @@ function Twofish_Encryption(K,P)
 
 	Me,Mo,S := makekeyMeMoSkey(K);
 	Ks := makeSubkeys(K);
+	print "Me is::", Me,"Mo is::", Mo,"S is ::", S;
+	//print Ks;
 
 	P := StringToInteger(P,16);		
 	P := Intseq(P,16);
@@ -573,13 +596,14 @@ function Twofish_Encryption(K,P)
 	end for;
 	P:=L;
 
-	//	ROUND 0: input whitening
+	//	ROUND 0: INPUT WHITENING
 
 	R_00 := XOR32(P[1],Ks[1]);
 	R_01 := XOR32(P[2],Ks[2]);
 	R_02 := XOR32(P[3],Ks[3]);
 	R_03 := XOR32(P[4],Ks[4]);
 
+	//16 ROUNDS OF F FUNCTION
 	for r in [0..15] do
 		T0 := h(R_00,S);
 		//shifting
@@ -617,7 +641,7 @@ function Twofish_Encryption(K,P)
 	R_172 := R_00;
 	R_173 := R_01;
 
-	// output whitening
+	//OUTPUT WHITENING
 	C0 := XOR32(R_170,Ks[5]);
 	C1 := XOR32(R_171,Ks[6]);
 	C2 := XOR32(R_172,Ks[7]);
@@ -647,15 +671,21 @@ function Twofish_Encryption(K,P)
 	return CypertextS;
 end function;
 
+	///////////////////////////////////////////////////////////
+	//////////////////// Driver Function //////////////////////
+	///////////////////////////////////////////////////////////
+
 //it accepts
 //key hexadecimal String, plaintext hexadecimal String, number of encryptions
 //returns
 //a list of ciphertext hexadecimal Strings, in order of generation
 function FullEncription(K, P, Iterations)
+//print "Starting process...";
 	bit := #K;
 	CT := [];
 	CTtemp := "";
 	OldKey := "";
+
 	for z in [1..Iterations] do
 		CTtemp := Twofish_Encryption(K, P);
 		OldKey := K;
@@ -673,6 +703,10 @@ function FullEncription(K, P, Iterations)
 	return CT;
 end function;
 
+
+	///////////////////////////////////////////////////////////
+	////////////////// DECRYPTION FUNCTION ////////////////////
+	///////////////////////////////////////////////////////////
 
 //it accepts
 //key hexadecimal String, ciphertext hexadecimal String
