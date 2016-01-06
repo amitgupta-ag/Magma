@@ -1,10 +1,16 @@
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::://
 //::::::::::::::::::Author: Amit Gupta:::::::::::::::::://
 //:::::::::::::::::::::01-Jan-2015:::::::::::::::::::::://
+//:::::::::https://github.com/amitgupta-nitb:::::::::::://
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
-//this function converts from decimal to Hexadecimal
-//the output is a string because it helps full encryption routine
+//==========================================================
+//	AD-HOC FUNCTIONS
+//	DecToHexString Function (used by FullEncryptionRoutine)
+//		Input: decimal number :: n
+//		Output: A string
+//===========================================================
+
 function DecToHexString(n)
 	hexNumber := Intseq(n, 16);
 	value := "";
@@ -106,7 +112,6 @@ function XOR(x1,x2)
 	return AsciiToValue(y[1..4])*16 + AsciiToValue(y[5..8]);
 end function;
 
-
 function XOR32(x1,x2)
 
 	// INPUT: x1 32 bit word, x2 32 bit word
@@ -163,17 +168,15 @@ function MagmaToValue(x)
 	return value;
 end function;
 
-	///////////////////////////////////////////////////////////
-	/////////////////////// q function ////////////////////////
-	///////////////////////////////////////////////////////////
 
-//x is the value, the table can be 0 or 1, it depends on the function
-//0 -> q0
-//1 -> q1
+ //	====================================================
+ //		Q Function:: q (x, table)
+ //
+ //	Input: x numeric 8 bit value , table: can be 0 or 1.
+ // Output: y numeric 8 bit value
+ //	====================================================
+
 function q(x, table)
-
-	//Input: x numeric 8 bit value
-	//Output: y numeric 8 bit value
 	t0 := [];
 	t1 := [];
 	t2 := [];
@@ -193,7 +196,7 @@ function q(x, table)
 	end if;
 	
 
-	b0 := x mod 16;		// b0 numeric nubble
+	b0 := x mod 16;		// b0 numeric nibble
 	a0 := x div 16;		// a0 numeric nibble
 
 	V4 := VectorSpace(GF(2),4);
@@ -232,10 +235,6 @@ function q(x, table)
 	return y;
 end function;
 
-	///////////////////////////////////////////////////////////
-	//////////////////////// g FUNCTION ///////////////////////
-	///////////////////////////////////////////////////////////
-
 //the function h
 function h(X,L)
 
@@ -257,6 +256,7 @@ function h(X,L)
 	//k : 2 -> 32 characters (128 bits)
 	//k : 3 -> 48 characters (192 bits)
 	//k : 4 -> 64 characters (256 bits)
+
 	k := #L;
 	power := 0;
 
@@ -269,6 +269,7 @@ function h(X,L)
 		k -:= 1;
 
 	end if;
+	
 	if k eq 3 then
 
 		x0 := XOR(q(x0, 1), L[3] mod divisor);
@@ -290,7 +291,7 @@ function h(X,L)
 	end if;
 
 
-	// MDS multiplication
+	// ================================MDS multiplication
 
 	M:=[0x01,0xEF,0x5B,0x5B,0x5B,0xEF,0xEF,0x01,0xEF,0x5B,0x01,0xEF,0xEF,0x01,0xEF,0x5B];
 
@@ -328,11 +329,11 @@ function h(X,L)
 	end if;
 
 
+	// ================================MDS Output
 	z0 := MM[1]*y0+MM[2]*y1 + MM[3]*y2 +MM[4]*y3;
 	z1 := MM[5]*y0+MM[6]*y1 + MM[7]*y2 +MM[8]*y3;
 	z2 := MM[9]*y0+MM[10]*y1 + MM[11]*y2 +MM[12]*y3;
 	z3 := MM[13]*y0+MM[14]*y1 + MM[15]*y2 +MM[16]*y3;
-
 
 	z0 := ElementToSequence(z0);
 	z1 := ElementToSequence(z1);
@@ -340,14 +341,10 @@ function h(X,L)
 	z3 := ElementToSequence(z3);
 
 	Z := MagmaToValue(z0) + MagmaToValue(z1)*2^8 + MagmaToValue(z2)*2^16 + MagmaToValue(z3)*2^24;
-
+	// =======OutPut of G function
 	return Z;
 
 end function;
-
-	///////////////////////////////////////////////////////////
-	///////////////////// Key Schedular ///////////////////////
-	///////////////////////////////////////////////////////////
 
 //key genearation
 function makekeyMeMoSkey(K)
@@ -358,7 +355,6 @@ function makekeyMeMoSkey(K)
 	// conversion of k in number.
 
 	N := #K;
-	print "N is:: ",N;
 	if N mod 8 eq 0 then
 		K := StringToInteger(K,16);			
 	else N := #K-2;
@@ -390,17 +386,15 @@ function makekeyMeMoSkey(K)
 	k := Floor(N/16);
 
 	// conversion of k in sequence, lenght 8*k, byte in GF(2^8)
-print "K::",K;
+
 	L:=[]; t:=0; M:=[];
 	for i in [1..#K] do
 		L := Append(L,K[i]);
-//print "intermL:: ", L;
 		if i mod 2 eq 0 then
 			M := Insert(M,1,L);
 			L := [];
 			t := t+1;
 		end if;
-//print "M is::", M;
 	end for;
 
 	L :=[];
@@ -409,9 +403,7 @@ print "K::",K;
 	end for;
 	Bytes := L;
 
-	///////////////////////////////////////////////////////////
-	/////////////// Construction of Me,Mo keys ////////////////
-	///////////////////////////////////////////////////////////
+	// Construction of Me,Mo keys
 
 	L:=[]; t :=0; MM:=[];
 	for i in [1..#Bytes] do
@@ -541,23 +533,25 @@ function makeSubkeys(K)
 	return Sk;
 end function;
 
-	///////////////////////////////////////////////////////////
-	////////////////// TWO FISH ENCRYPTION ////////////////////
-	///////////////////////////////////////////////////////////
 
-//it accepts
-//key hexadecimal String, plaintext hexadecimal String
-//returns
-//ciphertext hexadecimal String
+ //	========================================================
+ //		ENCRYPTION: Generates a ciphertext using Twofish
+ // 
+ // Input:
+ // 		K::  (string) :: key hexadecimal String
+ // 		P::  (string) :: plaintext hexadecimal String 
+ // Returns:
+ // 		A ciphertext hexadecimal String
+ //	========================================================
+
 function Twofish_Encryption(K,P)
 
-	// INPUT	K key (string), P plaintext (string)
-	// OUTPUT 	C ciphertext
+ //	=========================
+ //		Key Schedule
+ //	=========================
 
 	Me,Mo,S := makekeyMeMoSkey(K);
 	Ks := makeSubkeys(K);
-	print "Me is::", Me,"Mo is::", Mo,"S is ::", S;
-	//print Ks;
 
 	P := StringToInteger(P,16);		
 	P := Intseq(P,16);
@@ -596,35 +590,54 @@ function Twofish_Encryption(K,P)
 	end for;
 	P:=L;
 
-	//	ROUND 0: INPUT WHITENING
+
+ //	=========================
+ //		Input Whitening
+ //	=========================
+
+	//	ROUND 0: input whitening
 
 	R_00 := XOR32(P[1],Ks[1]);
 	R_01 := XOR32(P[2],Ks[2]);
 	R_02 := XOR32(P[3],Ks[3]);
 	R_03 := XOR32(P[4],Ks[4]);
 
-	//16 ROUNDS OF F FUNCTION
+
+ //	============================
+ //		16 Rounds of F-Function
+ //	============================
+
 	for r in [0..15] do
+
+		//	=========================
+		//		Function G
+		//	=========================
+
 		T0 := h(R_00,S);
+
+
 		//shifting
 		shiftR1 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_01,2)),8);
 		shiftR1 := MagmaToValue(shiftR1);
 		
 		T1 := h(shiftR1,S);
 
+
 		//calling F function
 		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod 2^32;
-		F1 := (T0 + 2*T1 + Ks[(2*r+9)+1]) mod 2^32;
+		F1 := ( (T0+T1) + T1 + Ks[(2*r+9)+1]) mod 2^32;
 
-		//round operation
+		//======= C2 (R_10)
 
 		R_10 := XOR32(R_02,F0);
 		R_10 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_10,2)),-1);
 		R_10 := MagmaToValue(R_10);
 
+
 		shiftR3 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_03,2)),+1);
 		shiftR3 := MagmaToValue(shiftR3);
 
+		//======= C3 (R_11)
 		R_11 := XOR32(shiftR3,F1);
 
 		//preparing the next round
@@ -641,7 +654,13 @@ function Twofish_Encryption(K,P)
 	R_172 := R_00;
 	R_173 := R_01;
 
-	//OUTPUT WHITENING
+
+ //	=========================
+ //		Output Whitening
+ //	=========================
+
+
+	// output whitening
 	C0 := XOR32(R_170,Ks[5]);
 	C1 := XOR32(R_171,Ks[6]);
 	C2 := XOR32(R_172,Ks[7]);
@@ -671,23 +690,24 @@ function Twofish_Encryption(K,P)
 	return CypertextS;
 end function;
 
-	///////////////////////////////////////////////////////////
-	//////////////////// Driver Function //////////////////////
-	///////////////////////////////////////////////////////////
+ //	==========================================================================
+ //		Main Method: Repeat TwoFish to n iterations
+ // 
+ // Input:
+ // 		K:: key hexadecimal String
+ // 		P:: plaintext hexadecimal String 
+ // 		Iterations:: number of encryptions
+ // Returns:
+ // 		A list of ciphertext hexadecimal Strings, in order of generation
+ //	==========================================================================
 
-//it accepts
-//key hexadecimal String, plaintext hexadecimal String, number of encryptions
-//returns
-//a list of ciphertext hexadecimal Strings, in order of generation
-function FullEncription(K, P, Iterations)
-//print "Starting process...";
+time function FullEncription(K, P, Iterations)
 	bit := #K;
 	CT := [];
 	CTtemp := "";
 	OldKey := "";
-
 	for z in [1..Iterations] do
-		CTtemp := Twofish_Encryption(K, P);
+		time CTtemp := Twofish_Encryption(K, P);
 		OldKey := K;
 		if #K eq 48 then
 			K := P cat OldKey[1..16];
@@ -704,17 +724,17 @@ function FullEncription(K, P, Iterations)
 end function;
 
 
-	///////////////////////////////////////////////////////////
-	////////////////// DECRYPTION FUNCTION ////////////////////
-	///////////////////////////////////////////////////////////
+ //	===========================================
+ //		TWOFISH DECRYPTION METHOD
+ // 
+ // Input:
+ // 		K:: key hexadecimal String
+ // 		C:: ciphertext hexadecimal String 
+ // Returns:
+ // 		A plaintext hexadecimal String
+ //	===========================================
 
-//it accepts
-//key hexadecimal String, ciphertext hexadecimal String
-//returns
-//plaintext hexadecimal String
 function Twofish_Decryption(K,C)
-
-
 	Me,Mo,S := makekeyMeMoSkey(K);
 	Ks := makeSubkeys(K);
 
@@ -826,3 +846,24 @@ function Twofish_Decryption(K,C)
 
 	return Plaintext;
 end function;
+
+
+ //	=====================================================
+ //		FULL DECRYPTION DRIVER FUNCTION
+ // 
+ // Input:
+ // 		K:: key hexadecimal String
+ // 		C:: Array of Ciphertext hexadecimal Strings 
+ // Returns:
+ // 		Plaintext Strings
+ //	=====================================================
+
+function FullDecryption(K, C)
+	for l in [1..#C] do
+		 time Twofish_Decryption(K,C[l]);
+	end for;
+	return "Decryption Done!!";
+end function;
+
+
+//==========end of file===========//
