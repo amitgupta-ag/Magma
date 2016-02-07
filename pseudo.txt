@@ -14,20 +14,25 @@
 
 	end function
 
-	function fFunction(P, K)
+//======PSEUDO CODE=============//
+
+
+	function TwoFish_Encryption(P, K)
 		intermData:= sbox(P);										//STEP-2A
 		intermData:= MDSMatrices(intermData, keyscheduler(K));		//STEP-2B
 		intermData:= PHT(intermData);								//STEP-2C
 		return addMod32(intermData);								//STEP-2D
 	end function
 
-//Main
-function TwoFishEncryption(P,K,quantity)
+//Main Driver Function
+function FullEncryption(P,K,quantity)
 	P:= inputwhitening(P); 					//STEP-1
 	termData:= P;			
 	for i in [1..16]	  					//STEP-2
-		termData:= fFunction(termData, K);
+		termData:= TwoFishEncryption(termData, K);
 	endfor
 	return outputWhitening(termData); 		//STEP-3
 end function
 
+
+//======PSEUDO CODE=============//

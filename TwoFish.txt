@@ -5,11 +5,18 @@
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 //==========================================================
-//	AD-HOC FUNCTIONS
-//	DecToHexString Function (used by FullEncryptionRoutine)
+//	Auxillary FUNCTIONS
+//	DecToHexString Function (used by Full_EncryptionRoutine)
 //		Input: decimal number :: n
 //		Output: A string
 //===========================================================
+
+twoToPow8 := 2^8;
+twoToPow16 := 2^16;
+twoToPow32 := 2^32;
+function printoutput(plain,cipher)
+	return "==================================================\nPlainText: ",plain,"\nCipherText:",cipher,"\n==================================================\n";	
+end function;
 
 function DecToHexString(n)
 	hexNumber := Intseq(n, 16);
@@ -123,9 +130,9 @@ function XOR32(x1,x2)
 	else
 		a7 := x1 mod 2^4;
 		a6 := x1 div 2^4 mod 2^4;
-		a5 := x1 div 2^8 mod 2^4;
+		a5 := x1 div twoToPow8 mod 2^4;
 		a4 := x1 div 2^12 mod 2^4;
-		a3 := x1 div 2^16 mod 2^4;
+		a3 := x1 div twoToPow16 mod 2^4;
 		a2 := x1 div 2^20 mod 2^4;
 		a1 := x1 div 2^24 mod 2^4;
 		a0 := x1 div 2^28 mod 2^4;
@@ -138,9 +145,9 @@ function XOR32(x1,x2)
 	else
 		b7 := x2 mod 2^4;
 		b6 := x2 div 2^4 mod 2^4;
-		b5 := x2 div 2^8 mod 2^4;
+		b5 := x2 div twoToPow8 mod 2^4;
 		b4 := x2 div 2^12 mod 2^4;
-		b3 := x2 div 2^16 mod 2^4;
+		b3 := x2 div twoToPow16 mod 2^4;
 		b2 := x2 div 2^20 mod 2^4;
 		b1 := x2 div 2^24 mod 2^4;
 		b0 := x2 div 2^28 mod 2^4;
@@ -151,7 +158,7 @@ function XOR32(x1,x2)
 	y := V32!x1 + V32!x2;
 	y := ElementToSequence(y);
 
-	return AsciiToValue(y[1..4])*2^28 + AsciiToValue(y[5..8])*2^24 + AsciiToValue(y[9..12])*2^20 + AsciiToValue(y[13..16])*2^16 + AsciiToValue(y[17..20])*2^12 + AsciiToValue(y[21..24])*2^8 + AsciiToValue(y[25..28])*2^4 + AsciiToValue(y[29..32]);
+	return AsciiToValue(y[1..4])*2^28 + AsciiToValue(y[5..8])*2^24 + AsciiToValue(y[9..12])*2^20 + AsciiToValue(y[13..16])*twoToPow16 + AsciiToValue(y[17..20])*2^12 + AsciiToValue(y[21..24])*twoToPow8 + AsciiToValue(y[25..28])*2^4 + AsciiToValue(y[29..32]);
 end function;
 
 function MagmaToValue(x)
@@ -168,6 +175,14 @@ function MagmaToValue(x)
 	return value;
 end function;
 
+function yGF28mds(yvalue,GF_28mds)
+	if yvalue eq 0 then 
+		yvalue := GF_28mds!0;
+	else
+		yvalue := GF_28mds!Intseq(yvalue,2);
+	end if;
+	return yvalue;
+end function;
 
  //	====================================================
  //		Q Function:: q (x, table)
@@ -241,17 +256,16 @@ function h(X,L)
 	// INPUT	X 32 bit word and L sequence of 32 bit word, the length is k
 	// OUTPUT	Z 32 bit word
 
-	divisor := 2^8;
+	divisor := twoToPow8;
 
 	//we must break X, the numeric value is of 4 Bytess
 
 	x0 := X mod divisor;
-	x1 := X div 2^8 mod divisor;
-	x2 := X div 2^16 mod divisor;
+	x1 := X div twoToPow8 mod divisor;
+	x2 := X div twoToPow16 mod divisor;
 	x3 := X div 2^24 mod divisor;
 
-	//devo spezzare L... (sequenza di k valori numerici) in 4 byte e calcolare y0,y1,y2,y3
-
+	//breaking L ... (sequence of k numerical values) in 4 bytes and calculate y0,y1,y2,y3
 	//k is the number of sublist of 32 bits in L
 	//k : 2 -> 32 characters (128 bits)
 	//k : 3 -> 48 characters (192 bits)
@@ -259,8 +273,7 @@ function h(X,L)
 
 	k := #L;
 	power := 0;
-
-	if k eq 4 then
+if k eq 4 then
 		x0 := XOR(q(x0, 1), L[4] mod divisor);
 		x1 := XOR(q(x1, 0), L[4] div 2^8 mod divisor);
 		x2 := XOR(q(x2, 0), L[4] div 2^16 mod divisor);
@@ -304,30 +317,10 @@ function h(X,L)
 		MM[i] := (GF_28mds)!Intseq(M[i],2);
 	end for;
 
-	if y0 eq 0 then 
-		y0 := GF_28mds!0;
-	else
-		y0 := GF_28mds!Intseq(y0,2);
-	end if;
-
-	if y1 eq 0 then 
-		y1 := GF_28mds!0;
-	else
-		y1 := GF_28mds!Intseq(y1,2);
-	end if;
-
-	if y2 eq 0 then 
-		y2 := GF_28mds!0;
-	else
-		y2 := GF_28mds!Intseq(y2,2);
-	end if;
-
-	if y3 eq 0 then 
-		y3 := GF_28mds!0;
-	else
-		y3 := GF_28mds!Intseq(y3,2);
-	end if;
-
+	y0 := yGF28mds(y0,GF_28mds);
+	y1 := yGF28mds(y1,GF_28mds);
+	y2 := yGF28mds(y2,GF_28mds);
+	y3 := yGF28mds(y3,GF_28mds);
 
 	// ================================MDS Output
 	z0 := MM[1]*y0+MM[2]*y1 + MM[3]*y2 +MM[4]*y3;
@@ -340,14 +333,14 @@ function h(X,L)
 	z2 := ElementToSequence(z2);
 	z3 := ElementToSequence(z3);
 
-	Z := MagmaToValue(z0) + MagmaToValue(z1)*2^8 + MagmaToValue(z2)*2^16 + MagmaToValue(z3)*2^24;
+	Z := MagmaToValue(z0) + MagmaToValue(z1)*twoToPow8 + MagmaToValue(z2)*twoToPow16 + MagmaToValue(z3)*2^24;
 	// =======OutPut of G function
 	return Z;
 
 end function;
 
 //key genearation
-function makekeyMeMoSkey(K)
+time function makekeyMeMoSkey(K)
 
 	// INPUT : key K (string)
 	// OUTPUT: subkeys (64 bit Me,Mo e S length)
@@ -358,8 +351,7 @@ function makekeyMeMoSkey(K)
 	if N mod 8 eq 0 then
 		K := StringToInteger(K,16);			
 	else N := #K-2;
-		K := Substring(K,3,N);
-		K := StringToInteger(K,16);		
+		K := StringToInteger(Substring(K,3,N),16);		
 	end if;
 
 	if N eq 32 then
@@ -385,7 +377,7 @@ function makekeyMeMoSkey(K)
 
 	k := Floor(N/16);
 
-	// conversion of k in sequence, lenght 8*k, byte in GF(2^8)
+	// conversion of k in sequence, lenght 8*k, byte in GF(twoToPow8)
 
 	L:=[]; t:=0; M:=[];
 	for i in [1..#K] do
@@ -416,7 +408,7 @@ function makekeyMeMoSkey(K)
 
 	L:=[];
 	for i in [1..#MM] do
-			L[i] := MM[i][1] + MM[i][2]*2^8 + MM[i][3]*2^16 + MM[i][4]*2^24;
+			L[i] := MM[i][1] + MM[i][2]*twoToPow8 + MM[i][3]*twoToPow16 + MM[i][4]*2^24;
 	end for;
 
 
@@ -511,21 +503,21 @@ function makeSubkeys(K)
 	// OUTPUT	sequence of subkeys
 
 	Me,Mo,S := makekeyMeMoSkey(K);
-	r := 2^24+2^16+2^8+1;
+	r := 16843009; // 16843009 is the output of (2^24)+(twoToPow16)+(twoToPow8)+1
 
 	A:=[]; B:=[];
 	for i in [1..20] do
 		A[i] := h(2*(i-1)*r, Mo);
 		b := h((2*i-1)*r, Me);
-		b := Rotate(ElementToSequence(GF(2^32)!Intseq(b,2)),8);
+		b := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(b,2)),8);
 		B[i] := MagmaToValue(b);
 	end for;
 
 	Sk:=[]; j:=1;
 	for i in [1..20] do
-		Sk[j] := (A[i]+B[i]) mod 2^32;
-		a := (A[i]+2*B[i]) mod 2^32;
-		a := Rotate(ElementToSequence(GF(2^32)!Intseq(a,2)),9);
+		Sk[j] := (A[i]+B[i]) mod twoToPow32;
+		a := (A[i]+2*B[i]) mod twoToPow32;
+		a := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(a,2)),9);
 		Sk[j+1] := MagmaToValue(a);
 		j:=j+2;
 	end for;
@@ -586,7 +578,7 @@ function Twofish_Encryption(K,P)
 
 	L:=[];
 	for i in [1..#MM] do
-			L[i] := MM[i][1] + MM[i][2]*2^8 + MM[i][3]*2^16 + MM[i][4]*2^24;
+			L[i] := MM[i][1] + MM[i][2]*twoToPow8 + MM[i][3]*twoToPow16 + MM[i][4]*2^24;
 	end for;
 	P:=L;
 
@@ -615,26 +607,24 @@ function Twofish_Encryption(K,P)
 
 		T0 := h(R_00,S);
 
-
 		//shifting
-		shiftR1 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_01,2)),8);
+		shiftR1 := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(R_01,2)),8);
 		shiftR1 := MagmaToValue(shiftR1);
 		
 		T1 := h(shiftR1,S);
 
-
 		//calling F function
-		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod 2^32;
-		F1 := ( (T0+T1) + T1 + Ks[(2*r+9)+1]) mod 2^32;
+		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod twoToPow32;
+		F1 := ( (T0+T1) + T1 + Ks[(2*r+9)+1]) mod twoToPow32;
 
 		//======= C2 (R_10)
 
 		R_10 := XOR32(R_02,F0);
-		R_10 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_10,2)),-1);
+		R_10 := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(R_10,2)),-1);
 		R_10 := MagmaToValue(R_10);
 
 
-		shiftR3 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_03,2)),+1);
+		shiftR3 := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(R_03,2)),+1);
 		shiftR3 := MagmaToValue(shiftR3);
 
 		//======= C3 (R_11)
@@ -659,7 +649,6 @@ function Twofish_Encryption(K,P)
  //		Output Whitening
  //	=========================
 
-
 	// output whitening
 	C0 := XOR32(R_170,Ks[5]);
 	C1 := XOR32(R_171,Ks[6]);
@@ -670,13 +659,13 @@ function Twofish_Encryption(K,P)
 	c := [];
 	for i in [1..16] do
 		if i le 4 then
-			c[i] := Floor(C0/2^(8*(i-1))) mod 2^8;
+			c[i] := Floor(C0/2^(8*(i-1))) mod twoToPow8;
 		elif i le 8 then
-			c[i] := Floor(C1/2^(8*(i-5))) mod 2^8;
+			c[i] := Floor(C1/2^(8*(i-5))) mod twoToPow8;
 		elif i le 12 then
-			c[i] := Floor(C2/2^(8*(i-9))) mod 2^8;
+			c[i] := Floor(C2/2^(8*(i-9))) mod twoToPow8;
 		else 
-			c[i] := Floor(C3/2^(8*(i-13))) mod 2^8;
+			c[i] := Floor(C3/2^(8*(i-13))) mod twoToPow8;
 		end if;
 	end for;
 
@@ -701,13 +690,13 @@ end function;
  // 		A list of ciphertext hexadecimal Strings, in order of generation
  //	==========================================================================
 
-time function FullEncription(K, P, Iterations)
+ function Iterative_Encription(K, P, Iterations)
 	bit := #K;
 	CT := [];
 	CTtemp := "";
 	OldKey := "";
 	for z in [1..Iterations] do
-		time CTtemp := Twofish_Encryption(K, P);
+		 CTtemp := Twofish_Encryption(K, P);
 		OldKey := K;
 		if #K eq 48 then
 			K := P cat OldKey[1..16];
@@ -721,6 +710,26 @@ time function FullEncription(K, P, Iterations)
 		CTtemp := "";
 	end for;
 	return CT;
+end function;
+
+ //	================================================================================
+ //		Main Method: Call Twofish encryption for a list of plaintexts (single key)
+ // 
+ // Input:
+ // 		K:: key hexadecimal String.
+ // 		PlainTexts:: An array of strings:: plaintext hexadecimal Strings. 
+ // Returns:
+ // 		A list of ciphertext hexadecimal Strings, in order of generation
+ // ================================================================================
+
+function EncriptArrayOfPlaintext(K, PlainTexts)
+	iterations := #PlainTexts;
+	print "KEY: ", K;
+	for z in [1..iterations] do
+		 time CTtemp := Twofish_Encryption(K, PlainTexts[z]); //time
+		 printoutput(PlainTexts[z],CTtemp);
+	end for;
+	return "Encryption Complete!";
 end function;
 
 
@@ -771,7 +780,7 @@ function Twofish_Decryption(K,C)
 
 	L:=[];
 	for i in [1..#MM] do
-			L[i] := MM[i][1] + MM[i][2]*2^8 + MM[i][3]*2^16 + MM[i][4]*2^24;
+			L[i] := MM[i][1] + MM[i][2]*twoToPow8 + MM[i][3]*twoToPow16 + MM[i][4]*2^24;
 	end for;
 	C:=L;
 
@@ -787,21 +796,21 @@ function Twofish_Decryption(K,C)
 	while r ge 0 do
 		//F function
 		T0 := h(R_00,S);
-		shiftR1 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_01,2)),8);
+		shiftR1 := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(R_01,2)),8);
 		shiftR1 := MagmaToValue(shiftR1);
 		T1 := h(shiftR1,S); 
 
-		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod 2^32;
-		F1 := (T0 + 2*T1 + Ks[(2*r+9)+1]) mod 2^32;
+		F0 := (T0 + T1 + Ks[(2*r+8)+1]) mod twoToPow32;
+		F1 := (T0 + 2*T1 + Ks[(2*r+9)+1]) mod twoToPow32;
 
 		// round operation
 
-		shiftR2 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_02,2)),1);
+		shiftR2 := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(R_02,2)),1);
 		shiftR2 := MagmaToValue(shiftR2);
 		R_10 := XOR32(shiftR2,F0);
 
 		R_11 := XOR32(R_03,F1);
-		R_11 := Rotate(ElementToSequence(GF(2^32)!Intseq(R_11,2)),-1);
+		R_11 := Rotate(ElementToSequence(GF(twoToPow32)!Intseq(R_11,2)),-1);
 		R_11 := MagmaToValue(R_11);
 
 		R_02 := R_00;
@@ -827,13 +836,13 @@ function Twofish_Decryption(K,C)
 	p := [];
 	for i in [1..16] do
 		if i le 4 then
-			p[i] := Floor(P0/2^(8*(i-1))) mod 2^8;
+			p[i] := Floor(P0/2^(8*(i-1))) mod twoToPow8;
 		elif i le 8 then
-			p[i] := Floor(P1/2^(8*(i-5))) mod 2^8;
+			p[i] := Floor(P1/2^(8*(i-5))) mod twoToPow8;
 		elif i le 12 then
-			p[i] := Floor(P2/2^(8*(i-9))) mod 2^8;
+			p[i] := Floor(P2/2^(8*(i-9))) mod twoToPow8;
 		else 
-			p[i] := Floor(P3/2^(8*(i-13))) mod 2^8;
+			p[i] := Floor(P3/2^(8*(i-13))) mod twoToPow8;
 		end if;
 	end for;
 
@@ -849,7 +858,7 @@ end function;
 
 
  //	=====================================================
- //		FULL DECRYPTION DRIVER FUNCTION
+ //		DECRYPTION DRIVER FUNCTION FOR ARRAY OF CIPHERS.
  // 
  // Input:
  // 		K:: key hexadecimal String
@@ -858,7 +867,7 @@ end function;
  // 		Plaintext Strings
  //	=====================================================
 
-function FullDecryption(K, C)
+function DecriptArrayOfCiphers(K, C)
 	for l in [1..#C] do
 		 time Twofish_Decryption(K,C[l]);
 	end for;
